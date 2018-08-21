@@ -1,0 +1,14 @@
+{
+  "extends": "react-app",
+  "rules": {
+    "react/prefer-stateless-function": "off",
+    "max-len": [
+      "warn",
+      160,
+      2
+    ],
+    "arrow-parens": "off",
+    "import/no-named-as-default": "off",
+    "react/forbid-prop-types": "off"
+  }
+}
