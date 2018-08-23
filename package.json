@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "eslint-config-react-app": "^2.1.0",
+    "fabric": "^2.3.6",
     "pdfjs-dist": "^2.0.489",
     "react": "^16.4.2",
     "react-dom": "^16.4.2",

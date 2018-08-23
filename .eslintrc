@@ -1,5 +1,9 @@
 {
-  "extends": "react-app",
+  "extends": [
+    "react-app",
+    "plugin:import/errors",
+    "plugin:import/warnings"
+  ],
   "rules": {
     "react/prefer-stateless-function": "off",
     "max-len": [
