@@ -68,7 +68,7 @@ class App extends Component {
         current.width = viewport.width;
 
         if (!this.state.selectionCanvas) {
-          const selectionCanvas = new fabric.Canvas('selection-canvas--left');
+          const selectionCanvas = new fabric.Canvas('selection-canvas');
           selectionCanvas.setHeight(viewport.height);
           selectionCanvas.setWidth(viewport.width * 2);
 
@@ -142,6 +142,20 @@ class App extends Component {
     this.renderPdfPage(pageNumber, 'rgb(255,255,255)', this.bookPageLeft, this.state.pdfBl);
     this.renderPdfPage(pageNumber + 1, 'rgb(255,255,255)', this.bookPageRight, this.state.pdfBl);
 
+    const { selectionCanvas } = this.state;
+    if (selectionCanvas) {
+      selectionCanvas
+        .getObjects()
+        .map(obj => {
+          obj.scaleX = this.state.scale;
+          obj.scaleY = this.state.scale;
+          console.log({ obj });
+          return obj;
+        });
+
+      selectionCanvas.renderAll();
+    }
+
     if (this.state.showAnswers) this.drawAnswerCanvasses(pageNumber);
   }
 
@@ -188,8 +202,11 @@ class App extends Component {
       hasRotatingPoint: false,
     };
 
-    selectionCanvas.add(new fabric.Rect(options));
-    selectionCanvas.setActiveObject(selectionCanvas.item(0));
+    const selection = new fabric.Rect(options);
+    selectionCanvas.add(selection);
+
+    const activeObjectPosition = selectionCanvas.getObjects().length - 1;
+    selectionCanvas.setActiveObject(selectionCanvas.item(activeObjectPosition));
   }
 
   render() {
@@ -207,7 +224,7 @@ class App extends Component {
         <div id="layer-container">
           <div className="page-container">
             <div className="selection-container">
-              <canvas id="selection-canvas--left" />
+              <canvas id="selection-canvas" />
             </div>
 
             <div className="canvas-wrapper">
