@@ -2,9 +2,6 @@ import React, { Component } from 'react';
 import pdfjs from 'pdfjs-dist/build/pdf';
 import { fabric } from 'fabric';
 
-import blPath from './assets/bl.pdf';
-import olPath from './assets/ol.pdf';
-
 import './App.css';
 
 pdfjs.GlobalWorkerOptions.workerSrc = '../../node_modules/pdfjs-dist/build/pdf.worker.js';
@@ -16,6 +13,12 @@ fabric.Object.prototype._renderStroke = function (ctx) {
   ctx.stroke();
   ctx.restore();
 };
+
+const ZOOM_SCALE = .25;
+const SELECTION_TOP_POSITION = 50;
+const SELECTION_LEFT_POSITION = 50;
+const SELECTION_WIDTH_SIZE = 250;
+const SELECTION_HEIGHT_SIZE = 100;
 
 class App extends Component {
   constructor(props) {
@@ -31,6 +34,7 @@ class App extends Component {
       pdflOl: null,
       showAnswers: false,
       selectionCanvas: undefined,
+      viewport: undefined,
     };
 
     this.bookPageLeft = React.createRef();
@@ -41,22 +45,22 @@ class App extends Component {
   }
 
   componentWillMount() {
-    pdfjs.getDocument(blPath)
+    pdfjs.getDocument('https://pakket-p-public.s3.amazonaws.com/pdf/506764_6063_bl_spitze3_lr1.pdf')
       .then(pdfBl =>
-        pdfjs.getDocument(olPath)
+        pdfjs.getDocument('https://pakket-p-public.s3.amazonaws.com/pdf/506764_6063_ol_spitze3_lr1.pdf')
           .then(pdfOl => {
             this.setState({ pdfBl, pdfOl, totalPages: pdfBl.numPages })
           })
       )
       .then(() => {
         this.drawAllCanvasses(this.state.pageNumber);
-      });
+      })
   };
 
   renderPdfPage(pageNumber, background, canvas, pdf) {
     this.setState({ pageRendering: true });
 
-    pdf.getPage(pageNumber)
+    return pdf.getPage(pageNumber)
       .then(page => {
         // Scale
         const viewport = page.getViewport(this.state.scale);
@@ -67,10 +71,12 @@ class App extends Component {
         current.height = viewport.height;
         current.width = viewport.width;
 
+        this.setState({ viewport });
+
         if (!this.state.selectionCanvas) {
           const selectionCanvas = new fabric.Canvas('selection-canvas');
           selectionCanvas.setHeight(viewport.height);
-          selectionCanvas.setWidth(viewport.width * 2);
+          selectionCanvas.setWidth(viewport.width);
 
           this.setState({ selectionCanvas });
         }
@@ -85,26 +91,23 @@ class App extends Component {
         return page.render(renderContext);
       })
       .then(() => {
-        this.setState(prevState => {
-          const { pageNumPending, pageNumber } = prevState;
-          let nextState = { pageRendering: false };
+        const { pageNumPending } = this.state;
+        if (pageNumPending !== null) this.drawAllCanvasses(pageNumPending);
 
-          if (pageNumPending !== null && pageNumPending !== pageNumber) {
-            nextState.pageNumPending = null;
-            this.drawAllCanvasses(pageNumPending);
-          }
-
-          return nextState;
-        });
+        this.setState({ pageRendering: false, pageNumPending: null });
       })
+      .catch(e => console.log(e));
   }
 
   queueRenderPage(pageNumber) {
     this.setState(prevState => {
       let nextState = { pageNumber };
 
-      if (prevState.pageRendering) nextState.pageNumPending = pageNumber;
-      else this.drawAllCanvasses(pageNumber);
+      if (prevState.pageRendering) {
+        nextState.pageNumPending = pageNumber;
+      } else {
+        this.drawAllCanvasses(pageNumber);
+      }
 
       return nextState;
     });
@@ -112,49 +115,39 @@ class App extends Component {
 
   onPrevPage() {
     const { pageNumber } = this.state;
-    if (pageNumber <= 1) return;
+    if (pageNumber <= 2) return;
 
-    const newPageNumber = pageNumber - 1;
+    const newPageNumber = pageNumber - 2;
     this.queueRenderPage(newPageNumber);
   }
 
   onNextPage() {
     const { pageNumber, totalPages } = this.state;
-    if (pageNumber >= totalPages) return;
+    if (pageNumber === totalPages) return;
 
-    const newPageNumber = pageNumber + 1;
+    const newPageNumber = pageNumber + 2;
     this.queueRenderPage(newPageNumber);
   }
 
   onPageSwitch(e) {
     const { totalPages } = this.state;
-    const pageNumber = e.target.value;
+    const pageNumber = +e.target.value;
     const regex = /^[0-9\b]+$/;
 
     if (!regex.test(pageNumber)) return;
-    if (pageNumber >= totalPages) return;
+    if (pageNumber > totalPages) return;
     if (pageNumber <= 0) return;
+    if (pageNumber === totalPages) {
+      this.queueRenderPage(pageNumber - 1);
+      return;
+    }
 
-    this.queueRenderPage(+pageNumber);
+    this.queueRenderPage(pageNumber);
   }
 
   drawAllCanvasses(pageNumber) {
     this.renderPdfPage(pageNumber, 'rgb(255,255,255)', this.bookPageLeft, this.state.pdfBl);
     this.renderPdfPage(pageNumber + 1, 'rgb(255,255,255)', this.bookPageRight, this.state.pdfBl);
-
-    const { selectionCanvas } = this.state;
-    if (selectionCanvas) {
-      selectionCanvas
-        .getObjects()
-        .map(obj => {
-          obj.scaleX = this.state.scale;
-          obj.scaleY = this.state.scale;
-          console.log({ obj });
-          return obj;
-        });
-
-      selectionCanvas.renderAll();
-    }
 
     if (this.state.showAnswers) this.drawAnswerCanvasses(pageNumber);
   }
@@ -164,19 +157,54 @@ class App extends Component {
     this.renderPdfPage(pageNumber + 1, 'rgba(0,0,0,0)', this.solutionPageRight, this.state.pdfOl);
   }
 
+  scaleSelections(scaleUp) {
+    const { selectionCanvas } = this.state;
+
+    if (selectionCanvas) {
+      selectionCanvas
+        .getObjects()
+        .map(obj => {
+          const mappedObj = Object.assign({}, obj);
+
+          const widthDiff = Math.round(obj.width / ZOOM_SCALE)
+          const heightDiff = Math.round(obj.height / ZOOM_SCALE)
+          const topDiff = Math.round(obj.top / ZOOM_SCALE);
+          const leftDiff = Math.round(obj.left / ZOOM_SCALE);
+
+          if (scaleUp) {
+            mappedObj.width += widthDiff;
+            mappedObj.height += heightDiff;
+            mappedObj.top += topDiff;
+            mappedObj.left += leftDiff;
+          } else {
+            mappedObj.width -= widthDiff;
+            mappedObj.height -= heightDiff;
+            mappedObj.top -= topDiff;
+            mappedObj.left -= leftDiff;
+          }
+
+          return mappedObj;
+        });
+
+      selectionCanvas.renderAll();
+    }
+  }
+
   onZoomIn() {
     this.setState(prevState => ({
-      scale: prevState.scale + .25
+      scale: prevState.scale + ZOOM_SCALE
     }), () => {
       this.drawAllCanvasses(this.state.pageNumber);
+      this.scaleSelections(true);
     });
   }
 
   onZoomOut() {
     this.setState(prevState => ({
-      scale: prevState.scale - .25
+      scale: prevState.scale - ZOOM_SCALE
     }), () => {
       this.drawAllCanvasses(this.state.pageNumber);
+      this.scaleSelections();
     });
   }
 
@@ -188,13 +216,13 @@ class App extends Component {
   }
 
   onAddSelection() {
-    const { selectionCanvas } = this.state;
+    const { selectionCanvas, scale } = this.state;
     const options = {
-      left: 50,
-      top: 50,
-      width: 250,
-      height: 100,
-      cornerSize: 6,
+      left: SELECTION_LEFT_POSITION * scale,
+      top: SELECTION_TOP_POSITION * scale,
+      width: SELECTION_WIDTH_SIZE * scale,
+      height: SELECTION_HEIGHT_SIZE * scale,
+      cornerSize: 10,
       stroke: '#FF9900',
       strokeWidth: 2,
       strokeDashArray: [5],
@@ -210,7 +238,6 @@ class App extends Component {
   }
 
   render() {
-    console.log('RENDER APP COMPONENT');
     return (
       <div>
         <button onClick={() => this.onPrevPage()}>previous</button>
@@ -223,11 +250,10 @@ class App extends Component {
 
         <div id="layer-container">
           <div className="page-container">
-            <div className="selection-container">
-              <canvas id="selection-canvas" />
-            </div>
-
             <div className="canvas-wrapper">
+              <div className="selection-container">
+                <canvas id="selection-canvas" />
+              </div>
               <canvas ref={this.bookPageLeft} />
             </div>
 
@@ -235,6 +261,7 @@ class App extends Component {
               <canvas ref={this.bookPageRight} />
             </div>
           </div>
+
 
           {this.state.showAnswers &&
             <div className="page-container">

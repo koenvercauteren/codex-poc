@@ -19,12 +19,12 @@
     z-index: 1;
 }
 
-/* .canvas-container,
-.upper-canvas,
-#selection-canvas--left {
+.canvas-container,
+.lower-canvas,
+.upper-canvas {
     width: 100% !important;
     height: 100% !important;
-} */
+}
 
 #layer-container {
     position: relative;
