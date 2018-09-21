@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import pdfjs from 'pdfjs-dist/build/pdf';
 import { fabric } from 'fabric';
+import axios from 'axios';
 
 import './App.css';
 
@@ -35,6 +36,7 @@ class App extends Component {
       showAnswers: false,
       selectionCanvas: undefined,
       viewport: undefined,
+      mp3: null,
     };
 
     this.bookPageLeft = React.createRef();
@@ -45,6 +47,15 @@ class App extends Component {
   }
 
   componentWillMount() {
+    axios.get('https://s3-eu-west-1.amazonaws.com/pakket-p-public/mp3/test.mp3')
+      .then(response => {
+        if (response.data) this.setState({ mp3: window.atob(response.data) })
+      })
+      .then(() => console.log(this.state.mp3))
+      .catch(error => {
+        console.log(error);
+      });
+
     pdfjs.getDocument('https://pakket-p-public.s3.amazonaws.com/pdf/506764_6063_bl_spitze3_lr1.pdf')
       .then(pdfBl =>
         pdfjs.getDocument('https://pakket-p-public.s3.amazonaws.com/pdf/506764_6063_ol_spitze3_lr1.pdf')
@@ -247,6 +258,10 @@ class App extends Component {
         <button onClick={() => this.onZoomIn()}>zoom in</button>
         <button onClick={() => this.onAddSelection()}>add selection</button>
         <input onClick={e => this.onToggleAnswers(e)} type="checkbox" /> toggle answers
+        <audio controls>
+          <source src={this.state.mp3} type="audio/mpeg" />
+          Your browser does not support the audio element.
+        </audio>
 
         <div id="layer-container">
           <div className="page-container">

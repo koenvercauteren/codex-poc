@@ -13,6 +13,8 @@
     ],
     "arrow-parens": "off",
     "import/no-named-as-default": "off",
+    "no-undef": "off",
+    "no-restricted-globals": "off",
     "react/forbid-prop-types": "off"
   }
 }
