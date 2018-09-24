@@ -13,3 +13,5 @@ workbox.routing.registerRoute('/', workbox.strategies.networkFirst());
 // external
 workbox.routing.registerRoute('https://pakket-p-public.s3.amazonaws.com/pdf/506764_6063_bl_spitze3_lr1.pdf', workbox.strategies.networkFirst());
 workbox.routing.registerRoute('https://pakket-p-public.s3.amazonaws.com/pdf/506764_6063_ol_spitze3_lr1.pdf', workbox.strategies.networkFirst());
+workbox.routing.registerRoute('https://pakket-p-public.s3.amazonaws.com/mp3/test.mp3', workbox.strategies.networkFirst());
+workbox.routing.registerRoute('https://pakket-p-public.s3.amazonaws.com/mp4/test.mp4', workbox.strategies.networkFirst());

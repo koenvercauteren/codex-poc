@@ -47,11 +47,26 @@ class App extends Component {
   }
 
   componentWillMount() {
-    axios.get('https://s3-eu-west-1.amazonaws.com/pakket-p-public/mp3/test.mp3')
+    axios({
+      method: 'get',
+      url: 'https://pakket-p-public.s3.amazonaws.com/mp3/test.mp3',
+      responseType: 'blob'
+    })
       .then(response => {
-        if (response.data) this.setState({ mp3: window.atob(response.data) })
+        this.setState({ mp3: window.URL.createObjectURL(response.data) });
       })
-      .then(() => console.log(this.state.mp3))
+      .catch(error => {
+        console.log(error);
+      });
+
+    axios({
+      method: 'get',
+      url: 'https://pakket-p-public.s3.amazonaws.com/mp4/test.mp4',
+      responseType: 'blob'
+    })
+      .then(response => {
+        this.setState({ mp4: window.URL.createObjectURL(response.data) });
+      })
       .catch(error => {
         console.log(error);
       });
@@ -258,10 +273,8 @@ class App extends Component {
         <button onClick={() => this.onZoomIn()}>zoom in</button>
         <button onClick={() => this.onAddSelection()}>add selection</button>
         <input onClick={e => this.onToggleAnswers(e)} type="checkbox" /> toggle answers
-        <audio controls>
-          <source src={this.state.mp3} type="audio/mpeg" />
-          Your browser does not support the audio element.
-        </audio>
+        {this.state.mp3 && <audio controls src={this.state.mp3} />}
+        {this.state.mp4 && <video controls src={this.state.mp4} />}
 
         <div id="layer-container">
           <div className="page-container">
