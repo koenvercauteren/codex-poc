@@ -8,7 +8,8 @@ module.exports = function override(config, env) {
     const workboxConfig = {
       ...defaultInjectConfig,
       swSrc: path.join(__dirname, 'src', 'custom-sw.js'),
-      importWorkboxFrom: "local"
+      importWorkboxFrom: "local",
+      importScripts: ['localforage.min.1.7.2.js', 'flatted.min.js']
     };
     config = rewireWorkboxInject(workboxConfig)(config, env);
   }

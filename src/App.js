@@ -71,16 +71,33 @@ class App extends Component {
         console.log(error);
       });
 
-    pdfjs.getDocument('https://pakket-p-public.s3.amazonaws.com/pdf/506764_6063_bl_spitze3_lr1.pdf')
-      .then(pdfBl =>
-        pdfjs.getDocument('https://pakket-p-public.s3.amazonaws.com/pdf/506764_6063_ol_spitze3_lr1.pdf')
-          .then(pdfOl => {
-            this.setState({ pdfBl, pdfOl, totalPages: pdfBl.numPages })
-          })
-      )
-      .then(() => {
-        this.drawAllCanvasses(this.state.pageNumber);
+    Promise.all([
+      axios({
+        method: 'get',
+        url: 'https://pakket-p-public.s3.amazonaws.com/pdf/506764_6063_bl_spitze3_lr1.pdf',
+        responseType: 'arraybuffer'
+      }),
+      axios({
+        method: 'get',
+        url: 'https://pakket-p-public.s3.amazonaws.com/pdf/506764_6063_ol_spitze3_lr1.pdf',
+        responseType: 'arraybuffer'
       })
+    ])
+      .then(([bl, ol]) => {
+        pdfjs.getDocument(bl)
+          .then(pdfBl =>
+            pdfjs.getDocument(ol)
+              .then(pdfOl => {
+                this.setState({ pdfBl, pdfOl, totalPages: pdfBl.numPages })
+              })
+          )
+          .then(() => {
+            this.drawAllCanvasses(this.state.pageNumber);
+          })
+      })
+      .catch(error => {
+        console.log(error);
+      });
   };
 
   renderPdfPage(pageNumber, background, canvas, pdf) {
